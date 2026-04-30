@@ -115,6 +115,24 @@
   .corner.bl { bottom: 32px; left: 32px; transform: scaleY(-1); }
   .corner.br { bottom: 32px; right: 32px; transform: scale(-1); }
 
+  /* Play button */
+  .play-btn {
+    display: inline-block;
+    margin-top: 40px;
+    font-size: clamp(11px, 1.4vw, 13px);
+    font-weight: 700;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    text-decoration: none;
+    color: #0e0e0e;
+    background: var(--accent);
+    padding: 14px 36px;
+    opacity: 0;
+    animation: fadeIn 1s ease 1.3s forwards;
+    transition: opacity 0.2s, transform 0.15s;
+  }
+  .play-btn:hover { opacity: 0.85 !important; transform: translateY(-2px); }
+
   /* Year stamp */
   .stamp {
     position: fixed;
@@ -159,6 +177,7 @@
       <span class="half-b">abet</span>
     </div>
     <p class="tagline"><span class="dot"></span> &nbsp; halfabet.com &nbsp; <span class="dot"></span></p>
+    <a href="game.html" class="play-btn">Play</a>
   </div>
 
   <div class="stamp">MMX X VI</div>

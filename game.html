@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>halfabet — play</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #0e0e0e;
+    --fg: #f0ece3;
+    --fg-dim: #888;
+    --fg-dimmer: #333;
+    --accent: #c8f060;
+    --accent-dim: #8aaa3a;
+    --error: #ff5f5f;
+    --panel: #161616;
+    --border: #222;
+    --bar-h: 10px;
+  }
+
+  html, body {
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: 'Syne', sans-serif;
+  }
+
+  /* ── Layout ── */
+  .shell {
+    max-width: 820px;
+    margin: 0 auto;
+    padding: 32px 24px 80px;
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+  }
+
+  /* ── Header ── */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .logo {
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    text-decoration: none;
+    color: var(--fg);
+  }
+  .logo span { color: transparent; -webkit-text-stroke: 1.5px var(--fg); }
+  .new-game-btn {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--fg-dim);
+    padding: 8px 16px;
+    cursor: pointer;
+    transition: border-color 0.2s, color 0.2s;
+  }
+  .new-game-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ── Alphabet display ── */
+  .alphabet-section { display: flex; flex-direction: column; gap: 12px; }
+  .section-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--fg-dim);
+  }
+  .alphabet-tiles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .tile {
+    width: 42px; height: 42px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    border: 1px solid var(--border);
+    transition: all 0.15s;
+    user-select: none;
+  }
+  .tile.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(200, 240, 96, 0.06);
+  }
+  .tile.inactive {
+    border-color: var(--fg-dimmer);
+    color: var(--fg-dimmer);
+  }
+
+  /* ── Input ── */
+  .input-section { display: flex; flex-direction: column; gap: 12px; }
+  .input-row {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+  }
+  .word-input {
+    flex: 1;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--fg);
+    font-family: 'DM Mono', monospace;
+    font-size: 20px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    padding: 14px 20px;
+    outline: none;
+    text-transform: lowercase;
+    transition: border-color 0.2s;
+  }
+  .word-input:focus { border-color: var(--fg-dim); }
+  .word-input.invalid { border-color: var(--error); }
+  .word-input.valid { border-color: var(--accent); }
+  .submit-btn {
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    background: var(--accent);
+    color: #0e0e0e;
+    border: none;
+    padding: 14px 28px;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.1s;
+  }
+  .submit-btn:hover { opacity: 0.88; }
+  .submit-btn:active { transform: scale(0.97); }
+  .submit-btn:disabled { opacity: 0.3; cursor: default; }
+
+  .feedback {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    min-height: 18px;
+    color: var(--error);
+    transition: opacity 0.3s;
+  }
+  .feedback.ok { color: var(--accent); }
+
+  /* ── Frequency bar ── */
+  .bar-section { display: flex; flex-direction: column; gap: 16px; }
+
+  .bar-container {
+    position: relative;
+    height: var(--bar-h);
+    background: var(--fg-dimmer);
+    border-radius: 0;
+  }
+  .bar-labels {
+    display: flex;
+    justify-content: space-between;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    color: var(--fg-dim);
+    margin-top: 6px;
+  }
+
+  /* Each word dot on the bar */
+  .bar-dot {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    transition: transform 0.2s;
+    z-index: 2;
+  }
+  .bar-dot:hover { transform: translate(-50%, -50%) scale(1.4); }
+  .bar-dot .dot-tooltip {
+    position: absolute;
+    bottom: 22px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--panel);
+    border: 1px solid var(--border);
+    padding: 4px 10px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+  .bar-dot:hover .dot-tooltip { opacity: 1; }
+
+  /* ── Word log ── */
+  .log-section { display: flex; flex-direction: column; gap: 12px; }
+  .log-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .log-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    animation: slideIn 0.3s cubic-bezier(0.16,1,0.3,1) both;
+  }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .log-word {
+    font-family: 'DM Mono', monospace;
+    font-size: 15px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    color: var(--fg);
+  }
+  .log-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .log-bar {
+    width: 120px;
+    height: 3px;
+    background: var(--fg-dimmer);
+    position: relative;
+  }
+  .log-bar-fill {
+    position: absolute;
+    left: 0; top: 0;
+    height: 100%;
+    background: var(--accent);
+    transition: width 0.6s cubic-bezier(0.16,1,0.3,1);
+  }
+  .log-score {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    color: var(--accent);
+    width: 36px;
+    text-align: right;
+  }
+  .log-rarity {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    color: var(--fg-dim);
+    width: 60px;
+    text-align: right;
+  }
+
+  .empty-state {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    color: var(--fg-dimmer);
+    padding: 20px 0;
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 600px) {
+    .shell { padding: 20px 16px 60px; gap: 28px; }
+    .tile { width: 34px; height: 34px; font-size: 14px; }
+    .word-input { font-size: 16px; padding: 12px 14px; }
+    .submit-btn { padding: 12px 18px; font-size: 12px; }
+    .log-bar { width: 60px; }
+    .log-rarity { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- Header -->
+  <header>
+    <a href="index.html" class="logo">half<span>abet</span></a>
+    <button class="new-game-btn" onclick="newGame()">↺ New alphabet</button>
+  </header>
+
+  <!-- Alphabet -->
+  <div class="alphabet-section">
+    <div class="section-label">Your letters</div>
+    <div class="alphabet-tiles" id="tiles"></div>
+  </div>
+
+  <!-- Input -->
+  <div class="input-section">
+    <div class="section-label">Enter a word</div>
+    <div class="input-row">
+      <input
+        type="text"
+        class="word-input"
+        id="wordInput"
+        placeholder="type here..."
+        autocomplete="off"
+        autocorrect="off"
+        spellcheck="false"
+        maxlength="32"
+      />
+      <button class="submit-btn" id="submitBtn" onclick="submitWord()">Submit</button>
+    </div>
+    <div class="feedback" id="feedback"></div>
+  </div>
+
+  <!-- Frequency bar -->
+  <div class="bar-section">
+    <div class="section-label">Frequency map — 0 rarest · 100 most common</div>
+    <div class="bar-container" id="barContainer">
+      <!-- dots injected here -->
+    </div>
+    <div class="bar-labels">
+      <span>0</span>
+      <span>25</span>
+      <span>50</span>
+      <span>75</span>
+      <span>100</span>
+    </div>
+  </div>
+
+  <!-- Word log -->
+  <div class="log-section">
+    <div class="section-label">Words found</div>
+    <div class="log-list" id="logList">
+      <div class="empty-state" id="emptyState">No words yet — start typing above</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+let availableLetters = new Set();
+let wordData = {};
+let submittedWords = new Set();
+let wordLog = []; // [{word, percentile}]
+
+// ── Boot ───────────────────────────────────────────────────────────────────
+async function init() {
+  await loadWords();
+  newGame();
+  setupInput();
+}
+
+async function loadWords() {
+  try {
+    const res = await fetch('data/words.json');
+    if (!res.ok) throw new Error('not found');
+    wordData = await res.json();
+  } catch(e) {
+    // fallback inline mini-dict for local preview without server
+    wordData = {
+      "the":99.9,"be":99.7,"to":99.6,"of":99.5,"and":99.4,"a":99.3,
+      "in":99.1,"that":98.9,"have":98.7,"it":98.5,"for":98.3,"not":98.1,
+      "on":97.9,"with":97.7,"he":97.5,"as":97.3,"do":97.1,"at":96.9,
+      "but":96.7,"by":96.5,"from":96.2,"or":96.0,"an":95.8,"all":95.5,
+      "will":95.2,"there":94.9,"her":94.6,"been":94.3,"has":94.0,"when":93.7,
+      "who":93.3,"get":93.0,"which":92.6,"go":92.2,"she":91.8,"one":91.4,
+      "out":91.0,"up":90.6,"what":90.2,"about":89.7,"know":89.2,"time":88.7,
+      "make":88.2,"just":87.7,"like":87.1,"see":86.5,"him":85.9,"take":85.3,
+      "into":84.7,"year":84.0,"come":83.3,"could":82.6,"think":81.8,"look":81.0,
+      "also":80.2,"back":79.4,"after":78.5,"use":77.6,"two":76.7,"well":75.7,
+      "way":74.7,"even":73.6,"want":72.5,"because":71.3,"any":70.1,"give":68.8,
+      "most":67.5,"tell":66.1,"very":64.7,"find":63.2,"still":61.7,"need":60.1,
+      "help":58.5,"talk":56.8,"turn":55.1,"start":53.3,"show":51.5,"hear":49.6,
+      "play":47.7,"run":45.7,"move":43.7,"live":41.6,"hold":39.5,"real":37.3,
+      "change":35.1,"light":32.8,"voice":30.5,"power":28.1,"stand":25.7,
+      "town":23.2,"plant":20.7,"river":18.1,"storm":15.5,"blank":12.8,
+      "grasp":10.1,"quirk":7.3,"blunt":4.6,"expel":2.8,"knoll":1.4,
+      "fleck":0.7,"zonal":0.2
+    };
+  }
+}
+
+function newGame() {
+  clearFeedback();
+  // Pick 13 random letters
+  const alpha = 'abcdefghijklmnopqrstuvwxyz'.split('');
+  for (let i = alpha.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [alpha[i], alpha[j]] = [alpha[j], alpha[i]];
+  }
+  availableLetters = new Set(alpha.slice(0, 13));
+  submittedWords = new Set();
+  wordLog = [];
+
+  renderTiles();
+  renderBar();
+  renderLog();
+  clearFeedback();
+  document.getElementById('wordInput').value = '';
+  document.getElementById('wordInput').className = 'word-input';
+}
+
+// ── Render ─────────────────────────────────────────────────────────────────
+function renderTiles() {
+  const container = document.getElementById('tiles');
+  container.innerHTML = '';
+  const all = 'abcdefghijklmnopqrstuvwxyz'.split('');
+  all.forEach(letter => {
+    const div = document.createElement('div');
+    div.className = 'tile ' + (availableLetters.has(letter) ? 'active' : 'inactive');
+    div.textContent = letter;
+    container.appendChild(div);
+  });
+}
+
+function renderBar() {
+  const container = document.getElementById('barContainer');
+  container.innerHTML = '';
+  wordLog.forEach(entry => {
+    const dot = document.createElement('div');
+    dot.className = 'bar-dot';
+    dot.style.left = entry.percentile + '%';
+    dot.innerHTML = `<div class="dot-tooltip">${entry.word} · ${entry.percentile}</div>`;
+    container.appendChild(dot);
+  });
+}
+
+function renderLog() {
+  const list = document.getElementById('logList');
+  const empty = document.getElementById('emptyState');
+
+  if (wordLog.length === 0) {
+    list.innerHTML = '';
+    list.appendChild(empty);
+    empty.style.display = 'block';
+    return;
+  }
+
+  empty.style.display = 'none';
+  list.innerHTML = '';
+
+  // newest first
+  [...wordLog].reverse().forEach(entry => {
+    const rarityLabel = rarityTag(entry.percentile);
+    const item = document.createElement('div');
+    item.className = 'log-item';
+    item.innerHTML = `
+      <span class="log-word">${entry.word}</span>
+      <div class="log-right">
+        <div class="log-bar">
+          <div class="log-bar-fill" style="width:${entry.percentile}%"></div>
+        </div>
+        <span class="log-score">${entry.percentile}</span>
+        <span class="log-rarity">${rarityLabel}</span>
+      </div>
+    `;
+    list.appendChild(item);
+  });
+}
+
+function rarityTag(p) {
+  if (p >= 90) return 'everyday';
+  if (p >= 70) return 'common';
+  if (p >= 50) return 'moderate';
+  if (p >= 30) return 'uncommon';
+  if (p >= 10) return 'rare';
+  return 'very rare';
+}
+
+// ── Input & validation ─────────────────────────────────────────────────────
+function setupInput() {
+  const input = document.getElementById('wordInput');
+
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') submitWord();
+  });
+
+  input.addEventListener('input', () => {
+    const val = input.value.toLowerCase().replace(/[^a-z]/g, '');
+    input.value = val;
+    clearFeedback();
+
+    if (val.length === 0) {
+      input.className = 'word-input';
+      return;
+    }
+
+    const invalid = [...val].find(c => !availableLetters.has(c));
+    if (invalid) {
+      input.className = 'word-input invalid';
+    } else {
+      input.className = 'word-input valid';
+    }
+  });
+}
+
+function submitWord() {
+  const input = document.getElementById('wordInput');
+  const word = input.value.toLowerCase().trim();
+
+  if (!word) return;
+
+  // Check letters
+  const badLetter = [...word].find(c => !availableLetters.has(c));
+  if (badLetter) {
+    showFeedback(`"${badLetter}" is not in your alphabet`, false);
+    return;
+  }
+
+  // Check duplicate
+  if (submittedWords.has(word)) {
+    showFeedback('already submitted', false);
+    return;
+  }
+
+  // Check dictionary / frequency
+  const percentile = wordData[word];
+  if (percentile === undefined) {
+    showFeedback('not a recognised word', false);
+    return;
+  }
+
+  // ✓ Valid
+  submittedWords.add(word);
+  wordLog.push({ word, percentile });
+  input.value = '';
+  input.className = 'word-input';
+  showFeedback(`${word} — ${percentile} · ${rarityTag(percentile)}`, true);
+
+  renderBar();
+  renderLog();
+}
+
+function showFeedback(msg, ok) {
+  const el = document.getElementById('feedback');
+  el.textContent = msg;
+  el.className = 'feedback' + (ok ? ' ok' : '');
+}
+
+function clearFeedback() {
+  const el = document.getElementById('feedback');
+  el.textContent = '';
+  el.className = 'feedback';
+}
+
+// ── Go ─────────────────────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>
