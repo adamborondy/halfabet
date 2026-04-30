@@ -332,7 +332,7 @@
   <div class="log-section">
     <div class="section-label">Words found</div>
     <div class="log-list" id="logList">
-      <div class="empty-state" id="emptyState">No words yet — start typing above</div>
+      <div class="empty-state">No words yet — start typing above</div>
     </div>
   </div>
 
@@ -429,16 +429,12 @@ function renderBar() {
 
 function renderLog() {
   const list = document.getElementById('logList');
-  const empty = document.getElementById('emptyState');
 
   if (wordLog.length === 0) {
-    list.innerHTML = '';
-    list.appendChild(empty);
-    empty.style.display = 'block';
+    list.innerHTML = '<div class="empty-state">No words yet — start typing above</div>';
     return;
   }
 
-  empty.style.display = 'none';
   list.innerHTML = '';
 
   // newest first
