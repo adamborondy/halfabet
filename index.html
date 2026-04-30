@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>halfabet</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #0e0e0e;
+    --fg: #f0ece3;
+    --accent: #c8f060;
+    --mid: #555;
+  }
+
+  html, body {
+    width: 100%; height: 100%;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: 'Syne', sans-serif;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .scene {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    user-select: none;
+  }
+
+  .word {
+    display: flex;
+    align-items: center;
+    line-height: 1;
+  }
+
+  /* First half: filled */
+  .half-a {
+    font-size: clamp(60px, 12vw, 140px);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: var(--fg);
+    opacity: 0;
+    animation: fadeSlideLeft 0.9s cubic-bezier(0.16,1,0.3,1) 0.2s forwards;
+  }
+
+  /* Divider line */
+  .divider {
+    width: 2px;
+    height: clamp(60px, 12vw, 140px);
+    background: var(--accent);
+    margin: 0 6px;
+    transform: scaleY(0);
+    transform-origin: center;
+    animation: growLine 0.5s cubic-bezier(0.16,1,0.3,1) 0.75s forwards;
+  }
+
+  /* Second half: outlined */
+  .half-b {
+    font-size: clamp(60px, 12vw, 140px);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: transparent;
+    -webkit-text-stroke: 2px var(--fg);
+    opacity: 0;
+    animation: fadeSlideRight 0.9s cubic-bezier(0.16,1,0.3,1) 0.35s forwards;
+  }
+
+  /* Tagline */
+  .tagline {
+    margin-top: 18px;
+    font-size: clamp(11px, 1.5vw, 15px);
+    font-weight: 400;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--mid);
+    opacity: 0;
+    animation: fadeIn 1s ease 1.1s forwards;
+  }
+
+  /* Accent dot */
+  .dot {
+    display: inline-block;
+    width: 7px; height: 7px;
+    background: var(--accent);
+    border-radius: 50%;
+    margin-bottom: 2px;
+    vertical-align: middle;
+  }
+
+  /* Decorative corner marks */
+  .corner {
+    position: fixed;
+    width: 24px; height: 24px;
+    opacity: 0;
+    animation: fadeIn 1s ease 1.3s forwards;
+  }
+  .corner::before, .corner::after {
+    content: '';
+    position: absolute;
+    background: var(--mid);
+  }
+  .corner::before { width: 100%; height: 1px; top: 0; left: 0; }
+  .corner::after  { width: 1px; height: 100%; top: 0; left: 0; }
+
+  .corner.tl { top: 32px; left: 32px; }
+  .corner.tr { top: 32px; right: 32px; transform: scaleX(-1); }
+  .corner.bl { bottom: 32px; left: 32px; transform: scaleY(-1); }
+  .corner.br { bottom: 32px; right: 32px; transform: scale(-1); }
+
+  /* Year stamp */
+  .stamp {
+    position: fixed;
+    bottom: 36px;
+    right: 36px;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    color: var(--mid);
+    writing-mode: vertical-rl;
+    opacity: 0;
+    animation: fadeIn 1s ease 1.4s forwards;
+  }
+
+  @keyframes fadeSlideLeft {
+    from { opacity: 0; transform: translateX(-30px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes fadeSlideRight {
+    from { opacity: 0; transform: translateX(30px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes growLine {
+    from { transform: scaleY(0); }
+    to   { transform: scaleY(1); }
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+</style>
+</head>
+<body>
+  <div class="corner tl"></div>
+  <div class="corner tr"></div>
+  <div class="corner bl"></div>
+  <div class="corner br"></div>
+
+  <div class="scene">
+    <div class="word">
+      <span class="half-a">half</span>
+      <div class="divider"></div>
+      <span class="half-b">abet</span>
+    </div>
+    <p class="tagline"><span class="dot"></span> &nbsp; halfabet.com &nbsp; <span class="dot"></span></p>
+  </div>
+
+  <div class="stamp">MMX X VI</div>
+</body>
+</html>
