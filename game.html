@@ -10,7 +10,7 @@
 
   :root {
     --bg: #0e0e0e;
-    --fg: #f0ece3;
+    --fg: #f8f6f2;
     --fg-dim: #888;
     --fg-dimmer: #333;
     --accent: #c8f060;
@@ -122,6 +122,9 @@
     transition: border-color 0.2s, color 0.2s;
   }
   .start-btn:hover { border-color: var(--accent); color: var(--accent); }
+  @media (max-width: 480px) {
+    .start-btn { font-size: 10px; padding: 6px 12px; }
+  }
 
   /* ── Alphabet display ── */
   .tagline {
@@ -384,7 +387,7 @@
 
   <!-- Alphabet -->
   <div class="alphabet-section">
-    <div class="section-label">Your letters</div>
+    <div class="section-label">Today's letters</div>
     <div class="alphabet-tiles" id="tiles"></div>
   </div>
 
