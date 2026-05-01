@@ -59,10 +59,10 @@
     width: 1.5px;
     height: 1.1em;
     background: var(--accent);
-    margin: 0 4px;
+    margin: 0 5px;
     flex-shrink: 0;
   }
-  .logo-b { color: transparent; -webkit-text-stroke: 1.5px var(--fg); }
+  .logo-b { color: var(--fg); }
 
   .header-right {
     display: flex;
@@ -110,6 +110,18 @@
   .start-btn:hover { border-color: var(--accent); color: var(--accent); }
 
   /* ── Alphabet display ── */
+  .tagline {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    letter-spacing: 0.02em;
+    color: var(--fg-dim);
+    line-height: 1.5;
+  }
+  .tagline strong {
+    color: var(--fg);
+    font-weight: 500;
+  }
+
   .alphabet-section { display: flex; flex-direction: column; gap: 12px; }
   .section-label {
     font-family: 'DM Mono', monospace;
@@ -312,6 +324,13 @@
     padding: 20px 0;
   }
 
+  /* ── Tile flash ── */
+  .tile.flash {
+    background: rgba(200, 240, 96, 0.3) !important;
+    border-color: var(--accent) !important;
+    color: var(--accent) !important;
+  }
+
   /* ── Responsive ── */
   @media (max-width: 600px) {
     .shell { padding: 20px 16px 60px; gap: 28px; }
@@ -334,6 +353,10 @@
         <span class="header-stat-value" id="timerDisplay">60</span>
         <span class="header-stat-label">time</span>
       </div>
+      <div class="header-stat hidden" id="wordsStat">
+        <span class="header-stat-value" id="wordsDisplay">0</span>
+        <span class="header-stat-label">words</span>
+      </div>
       <div class="header-stat hidden" id="scoreStat">
         <span class="header-stat-value" id="scoreDisplay">0</span>
         <span class="header-stat-label">score</span>
@@ -341,6 +364,9 @@
       <button class="start-btn" id="startBtn" onclick="startGame()">Start</button>
     </div>
   </header>
+
+  <!-- Tagline -->
+  <p class="tagline">You get <strong>half the alphabet</strong> and <strong>120 seconds</strong>. Rare finds score big, common ones barely register.</p>
 
   <!-- Alphabet -->
   <div class="alphabet-section">
@@ -402,7 +428,7 @@ let wordLog = []; // [{word, score}]
 let totalScore = 0;
 let gameState = 'idle'; // 'idle' | 'playing' | 'ended'
 let timerInterval = null;
-let timeLeft = 60;
+let timeLeft = 120;
 
 // ── Boot ───────────────────────────────────────────────────────────────────
 async function init() {
@@ -476,13 +502,14 @@ function startGame() {
   submittedWords = new Set();
   wordLog = [];
   totalScore = 0;
-  timeLeft = 60;
+  timeLeft = 120;
   gameState = 'playing';
 
   renderTiles();
   renderBar();
   renderLog();
-  clearFeedback();
+
+  document.getElementById('startBtn').style.display = 'none';
 
   const input = document.getElementById('wordInput');
   input.value = '';
@@ -491,16 +518,17 @@ function startGame() {
   input.focus();
 
   document.getElementById('submitBtn').disabled = false;
-  document.getElementById('startBtn').style.display = 'none';
 
   const timerEl = document.getElementById('timerDisplay');
   timerEl.textContent = timeLeft;
   timerEl.closest('.header-stat').classList.remove('hidden');
   timerEl.classList.remove('urgent');
 
-  const scoreStat = document.getElementById('scoreStat');
-  scoreStat.classList.remove('hidden');
+  document.getElementById('scoreStat').classList.remove('hidden');
   document.getElementById('scoreDisplay').textContent = '0';
+
+  document.getElementById('wordsStat').classList.remove('hidden');
+  document.getElementById('wordsDisplay').textContent = '0';
 
   timerInterval = setInterval(tick, 1000);
 }
@@ -533,7 +561,7 @@ function endGame() {
   btn.style.display = '';
 
   const count = wordLog.length;
-  showFeedback(`time's up — ${count} word${count !== 1 ? 's' : ''} · score ${totalScore}`, true);
+  showFeedback(`time's up · ${count} word${count !== 1 ? 's' : ''} · score ${totalScore}`, true);
 }
 
 // ── Render ─────────────────────────────────────────────────────────────────
@@ -593,6 +621,18 @@ function renderLog() {
   });
 }
 
+function flashLetters(word) {
+  const tiles = document.getElementById('tiles').children;
+  const all = 'abcdefghijklmnopqrstuvwxyz'.split('');
+  [...new Set([...word])].forEach(letter => {
+    const idx = all.indexOf(letter);
+    if (idx >= 0 && tiles[idx]) {
+      tiles[idx].classList.add('flash');
+      setTimeout(() => tiles[idx].classList.remove('flash'), 500);
+    }
+  });
+}
+
 function rarityTag(s) {
   if (s >= 90) return 'very rare';
   if (s >= 70) return 'rare';
@@ -640,7 +680,7 @@ function submitWord() {
   // Check letters
   const badLetter = [...word].find(c => !availableLetters.has(c));
   if (badLetter) {
-    showFeedback(`"${badLetter}" is not in your alphabet`, false);
+    showFeedback(`"${badLetter}" is not in your halfabet`, false);
     return;
   }
 
@@ -665,7 +705,9 @@ function submitWord() {
   input.value = '';
   input.className = 'word-input';
   document.getElementById('scoreDisplay').textContent = totalScore;
-  showFeedback(`${word} — +${score} · ${rarityTag(score)}`, true);
+  document.getElementById('wordsDisplay').textContent = wordLog.length;
+  showFeedback(`${word} · ${rarityTag(score)} · ${score} points`, true);
+  flashLetters(word);
 
   renderBar();
   renderLog();
