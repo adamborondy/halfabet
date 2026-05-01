@@ -69,13 +69,6 @@
     align-items: center;
     gap: 24px;
   }
-  .logo span { color: transparent; -webkit-text-stroke: 1.5px var(--fg); }
-
-  .header-right {
-    display: flex;
-    align-items: center;
-    gap: 24px;
-  }
 
   .header-stat {
     display: flex;
@@ -100,7 +93,7 @@
     color: var(--fg-dim);
   }
   .header-stat.hidden { visibility: hidden; }
-  .timer.urgent { color: var(--error); }
+  #timerDisplay.urgent { color: var(--error); }
 
   .start-btn {
     font-family: 'DM Mono', monospace;
@@ -335,8 +328,7 @@
 
   <!-- Header -->
   <header>
-    <a href="index.html" class="logo">half<span>abet</span></a>
-
+    <a href="index.html" class="logo"><span class="logo-a">half</span><span class="logo-div"></span><span class="logo-b">abet</span></a>
     <div class="header-right">
       <div class="header-stat hidden" id="timerStat">
         <span class="header-stat-value" id="timerDisplay">60</span>
@@ -666,7 +658,7 @@ function submitWord() {
   }
 
   // ✓ Valid — score is inverted: rarest = 100, most common = 0
-  const score = Math.round((100 - frequency) * 10) / 10;
+  const score = Math.round(Math.sqrt(100 - frequency) * 10);
   submittedWords.add(word);
   wordLog.push({ word, score });
   totalScore = Math.round((totalScore + score) * 10) / 10;
