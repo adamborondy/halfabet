@@ -366,7 +366,7 @@
   </header>
 
   <!-- Tagline -->
-  <p class="tagline">You get <strong>half the alphabet</strong> and <strong>120 seconds</strong>. Rare finds score big, common ones barely register.</p>
+  <p class="tagline">Find words using <strong>half the alphabet</strong> and <strong>120 seconds</strong> on the clock. Rare finds score big, common ones barely register. Same halfabet for everyone, different scores.</p>
 
   <!-- Alphabet -->
   <div class="alphabet-section">
@@ -561,7 +561,7 @@ function endGame() {
   btn.style.display = '';
 
   const count = wordLog.length;
-  showFeedback(`time's up · ${count} word${count !== 1 ? 's' : ''} · score ${totalScore}`, true);
+  clearFeedback();
 }
 
 // ── Render ─────────────────────────────────────────────────────────────────
