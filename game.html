@@ -52,7 +52,39 @@
     color: var(--fg);
   }
   .logo span { color: transparent; -webkit-text-stroke: 1.5px var(--fg); }
-  .new-game-btn {
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+  }
+
+  .header-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+  }
+  .header-stat-value {
+    font-family: 'DM Mono', monospace;
+    font-size: 22px;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    color: var(--fg);
+    line-height: 1;
+    transition: color 0.3s;
+  }
+  .header-stat-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--fg-dim);
+  }
+  .header-stat.hidden { visibility: hidden; }
+  .timer.urgent { color: var(--error); }
+
+  .start-btn {
     font-family: 'DM Mono', monospace;
     font-size: 11px;
     letter-spacing: 0.15em;
@@ -64,7 +96,7 @@
     cursor: pointer;
     transition: border-color 0.2s, color 0.2s;
   }
-  .new-game-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .start-btn:hover { border-color: var(--accent); color: var(--accent); }
 
   /* ── Alphabet display ── */
   .alphabet-section { display: flex; flex-direction: column; gap: 12px; }
@@ -124,6 +156,7 @@
   .word-input:focus { border-color: var(--fg-dim); }
   .word-input.invalid { border-color: var(--error); }
   .word-input.valid { border-color: var(--accent); }
+  .word-input:disabled { opacity: 0.3; cursor: default; }
   .submit-btn {
     font-family: 'Syne', sans-serif;
     font-size: 13px;
@@ -285,7 +318,17 @@
   <!-- Header -->
   <header>
     <a href="index.html" class="logo">half<span>abet</span></a>
-    <button class="new-game-btn" onclick="newGame()">↺ New alphabet</button>
+    <div class="header-right">
+      <div class="header-stat hidden" id="timerStat">
+        <span class="header-stat-value" id="timerDisplay">60</span>
+        <span class="header-stat-label">time</span>
+      </div>
+      <div class="header-stat hidden" id="scoreStat">
+        <span class="header-stat-value" id="scoreDisplay">0</span>
+        <span class="header-stat-label">score</span>
+      </div>
+      <button class="start-btn" id="startBtn" onclick="startGame()">Start</button>
+    </div>
   </header>
 
   <!-- Alphabet -->
@@ -307,15 +350,16 @@
         autocorrect="off"
         spellcheck="false"
         maxlength="32"
+        disabled
       />
-      <button class="submit-btn" id="submitBtn" onclick="submitWord()">Submit</button>
+      <button class="submit-btn" id="submitBtn" onclick="submitWord()" disabled>Submit</button>
     </div>
     <div class="feedback" id="feedback"></div>
   </div>
 
   <!-- Frequency bar -->
   <div class="bar-section">
-    <div class="section-label">Frequency map — 0 rarest · 100 most common</div>
+    <div class="section-label">Rarity map — 0 most common · 100 rarest</div>
     <div class="bar-container" id="barContainer">
       <!-- dots injected here -->
     </div>
@@ -332,7 +376,7 @@
   <div class="log-section">
     <div class="section-label">Words found</div>
     <div class="log-list" id="logList">
-      <div class="empty-state">No words yet — start typing above</div>
+      <div class="empty-state">Press Start to begin</div>
     </div>
   </div>
 
@@ -343,13 +387,17 @@
 let availableLetters = new Set();
 let wordData = {};
 let submittedWords = new Set();
-let wordLog = []; // [{word, percentile}]
+let wordLog = []; // [{word, score}]
+let totalScore = 0;
+let gameState = 'idle'; // 'idle' | 'playing' | 'ended'
+let timerInterval = null;
+let timeLeft = 60;
 
 // ── Boot ───────────────────────────────────────────────────────────────────
 async function init() {
   await loadWords();
-  newGame();
   setupInput();
+  renderTiles();
 }
 
 async function loadWords() {
@@ -382,24 +430,99 @@ async function loadWords() {
   }
 }
 
-function newGame() {
+function dailySeed() {
+  const d = new Date();
+  const s = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = (h * 16777619) >>> 0;
+  }
+  return h;
+}
+
+function seededRand(seed) {
+  // mulberry32
+  return function() {
+    seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+    let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+function startGame() {
   clearFeedback();
-  // Pick 13 random letters
+
+  // Pick today's 13 letters (same for all users on the same day)
+  const rand = seededRand(dailySeed());
   const alpha = 'abcdefghijklmnopqrstuvwxyz'.split('');
   for (let i = alpha.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = Math.floor(rand() * (i + 1));
     [alpha[i], alpha[j]] = [alpha[j], alpha[i]];
   }
   availableLetters = new Set(alpha.slice(0, 13));
   submittedWords = new Set();
   wordLog = [];
+  totalScore = 0;
+  timeLeft = 60;
+  gameState = 'playing';
 
   renderTiles();
   renderBar();
   renderLog();
   clearFeedback();
-  document.getElementById('wordInput').value = '';
-  document.getElementById('wordInput').className = 'word-input';
+
+  const input = document.getElementById('wordInput');
+  input.value = '';
+  input.className = 'word-input';
+  input.disabled = false;
+  input.focus();
+
+  document.getElementById('submitBtn').disabled = false;
+  document.getElementById('startBtn').style.display = 'none';
+
+  const timerEl = document.getElementById('timerDisplay');
+  timerEl.textContent = timeLeft;
+  timerEl.closest('.header-stat').classList.remove('hidden');
+  timerEl.classList.remove('urgent');
+
+  const scoreStat = document.getElementById('scoreStat');
+  scoreStat.classList.remove('hidden');
+  document.getElementById('scoreDisplay').textContent = '0';
+
+  timerInterval = setInterval(tick, 1000);
+}
+
+function tick() {
+  timeLeft--;
+  const timerEl = document.getElementById('timerDisplay');
+  timerEl.textContent = timeLeft;
+
+  if (timeLeft <= 10) timerEl.classList.add('urgent');
+
+  if (timeLeft <= 0) endGame();
+}
+
+function endGame() {
+  clearInterval(timerInterval);
+  timerInterval = null;
+  gameState = 'ended';
+
+  const input = document.getElementById('wordInput');
+  input.disabled = true;
+  document.getElementById('submitBtn').disabled = true;
+
+  const timerEl = document.getElementById('timerDisplay');
+  timerEl.textContent = '0';
+  timerEl.classList.add('urgent');
+
+  const btn = document.getElementById('startBtn');
+  btn.textContent = '↺ Play again';
+  btn.style.display = '';
+
+  const count = wordLog.length;
+  showFeedback(`time's up — ${count} word${count !== 1 ? 's' : ''} · score ${totalScore}`, true);
 }
 
 // ── Render ─────────────────────────────────────────────────────────────────
@@ -409,7 +532,11 @@ function renderTiles() {
   const all = 'abcdefghijklmnopqrstuvwxyz'.split('');
   all.forEach(letter => {
     const div = document.createElement('div');
-    div.className = 'tile ' + (availableLetters.has(letter) ? 'active' : 'inactive');
+    if (gameState === 'idle') {
+      div.className = 'tile inactive';
+    } else {
+      div.className = 'tile ' + (availableLetters.has(letter) ? 'active' : 'inactive');
+    }
     div.textContent = letter;
     container.appendChild(div);
   });
@@ -421,8 +548,8 @@ function renderBar() {
   wordLog.forEach(entry => {
     const dot = document.createElement('div');
     dot.className = 'bar-dot';
-    dot.style.left = entry.percentile + '%';
-    dot.innerHTML = `<div class="dot-tooltip">${entry.word} · ${entry.percentile}</div>`;
+    dot.style.left = entry.score + '%';
+    dot.innerHTML = `<div class="dot-tooltip">${entry.word} · ${entry.score}</div>`;
     container.appendChild(dot);
   });
 }
@@ -437,18 +564,17 @@ function renderLog() {
 
   list.innerHTML = '';
 
-  // newest first
-  [...wordLog].reverse().forEach(entry => {
-    const rarityLabel = rarityTag(entry.percentile);
+  [...wordLog].sort((a, b) => b.score - a.score).forEach(entry => {
+    const rarityLabel = rarityTag(entry.score);
     const item = document.createElement('div');
     item.className = 'log-item';
     item.innerHTML = `
       <span class="log-word">${entry.word}</span>
       <div class="log-right">
         <div class="log-bar">
-          <div class="log-bar-fill" style="width:${entry.percentile}%"></div>
+          <div class="log-bar-fill" style="width:${entry.score}%"></div>
         </div>
-        <span class="log-score">${entry.percentile}</span>
+        <span class="log-score">${entry.score}</span>
         <span class="log-rarity">${rarityLabel}</span>
       </div>
     `;
@@ -456,13 +582,13 @@ function renderLog() {
   });
 }
 
-function rarityTag(p) {
-  if (p >= 90) return 'everyday';
-  if (p >= 70) return 'common';
-  if (p >= 50) return 'moderate';
-  if (p >= 30) return 'uncommon';
-  if (p >= 10) return 'rare';
-  return 'very rare';
+function rarityTag(s) {
+  if (s >= 90) return 'very rare';
+  if (s >= 70) return 'rare';
+  if (s >= 50) return 'uncommon';
+  if (s >= 30) return 'moderate';
+  if (s >= 10) return 'common';
+  return 'everyday';
 }
 
 // ── Input & validation ─────────────────────────────────────────────────────
@@ -493,6 +619,8 @@ function setupInput() {
 }
 
 function submitWord() {
+  if (gameState !== 'playing') return;
+
   const input = document.getElementById('wordInput');
   const word = input.value.toLowerCase().trim();
 
@@ -512,18 +640,21 @@ function submitWord() {
   }
 
   // Check dictionary / frequency
-  const percentile = wordData[word];
-  if (percentile === undefined) {
+  const frequency = wordData[word];
+  if (frequency === undefined) {
     showFeedback('not a recognised word', false);
     return;
   }
 
-  // ✓ Valid
+  // ✓ Valid — score is inverted: rarest = 100, most common = 0
+  const score = Math.round((100 - frequency) * 10) / 10;
   submittedWords.add(word);
-  wordLog.push({ word, percentile });
+  wordLog.push({ word, score });
+  totalScore = Math.round((totalScore + score) * 10) / 10;
   input.value = '';
   input.className = 'word-input';
-  showFeedback(`${word} — ${percentile} · ${rarityTag(percentile)}`, true);
+  document.getElementById('scoreDisplay').textContent = totalScore;
+  showFeedback(`${word} — +${score} · ${rarityTag(score)}`, true);
 
   renderBar();
   renderLog();
