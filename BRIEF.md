@@ -10,8 +10,7 @@ Tagline: *Find words using half the alphabet and 120 seconds on the clock. Rare 
 
 ## Files
 
-- `index.html` — landing page (logo animation, Play button)
-- `game.html` — the game itself (all logic + UI in one file, no build step)
+- `index.html` — the game (all logic + UI in one file, no build step; landing page removed)
 - `data/words.json` — dictionary: `{ "word": frequencyScore }` where frequency is 0–100 (100 = most common)
 
 ---
@@ -22,6 +21,11 @@ Tagline: *Find words using half the alphabet and 120 seconds on the clock. Rare 
 - Vanilla HTML/CSS/JS, no framework, no bundler
 - Fonts: **Syne** (headings, UI) + **DM Mono** (tiles, numbers, monospace elements)
 - Hosted as static files; deployed from `main` branch
+- Analytics: **Umami Cloud** (free tier, no cookies) — tracks `game-started` and `game-ended` (with `score` + `words` properties)
+
+### Browser identity
+- Favicon: inline SVG data URI — dark square with lime `h`, lime vertical bar divider, white `a`; mirrors the logo exactly, no image file needed
+- Window title: `half │ abet` — Unicode box-drawing vertical bar (U+2502) replicates the logo divider in plain text
 
 ### Daily seed
 ```js
@@ -84,7 +88,7 @@ Three-span structure: `half` (accent color) + vertical divider (1.5px, accent) +
 <span class="logo-b">abet</span>
 ```
 
-### UI sections (top to bottom in game.html)
+### UI sections (top to bottom in index.html)
 1. **Header** — logo left, stats (time / words / score) + start/play-again button right. Stats hidden until game starts.
 2. **Tagline** — DM Mono, dimmed, `<strong>` highlights in white
 3. **Today's letters** — 26 tiles, active ones (accent) vs inactive (dimmed)
@@ -136,5 +140,24 @@ Timer turns red (`--error`) when ≤10 seconds remain. End of game: feedback cle
 - **Sound design** — subtle click on tile flash, success chime on rare word
 
 ### Content
-- Expand `words.json` — currently covers common English; could add proper nouns toggle, British spellings
-- Frequency data source — current file is curated; could cross-reference against a corpus (e.g. Google Books Ngrams)
+- Proper nouns toggle — British spellings already included via Oxford source
+- Further frequency calibration — current scores for newer words derived from `wordfreq` corpus; could be refined
+
+---
+
+## Word list — current state
+
+`data/words.json` has ~137,000 entries. Pipeline used to build it:
+
+1. **Oxford validation** — every word checked via macOS `DictionaryServices` framework (the same Oxford Dictionary of English used by the Dictionary app). ~6,500 non-words removed from the original list.
+2. **Gap fill** — ~70,000 missing Oxford-valid words added from a merged reference corpus (`words_alpha` + system dict). Frequency scores assigned via calibrated `wordfreq` Zipf mapping.
+3. **Scoring strategy for new words**
+   - Words in `wordfreq` corpus: Zipf score mapped to 0–100 frequency scale (empirically calibrated against existing entries)
+   - Inflected forms not in corpus (e.g. `-ing`, `-ies`, `-ed`): inherit base word's frequency + 2
+   - Specialist / obscure terms not in any corpus: fixed frequency 5 → game score ~95 pts
+4. **Short word curation**
+   - 1-letter: only `a` and `i` (Oxford flags all 26 letters as entries via abbreviation definitions)
+   - 2-letter: TWL/SOWPODS standard word-game list (107 words) + common real-usage entries (`tv`, `dj`, `pc`, `cd`, `ac`, `dc`, etc.) confirmed by Oxford
+   - 3-letter+: Oxford-validated, no further manual curation needed
+
+**To regenerate or extend the word list**, the validation script requires macOS (for `DictionaryServices`) and `wordfreq` installed in the project venv (`uv add wordfreq`).
