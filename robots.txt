@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://halfabet.com/sitemap.xml
