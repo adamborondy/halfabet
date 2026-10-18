@@ -1,8 +1,10 @@
-"""Re-estimate frequencies for words missing from wordfreq (Zipf == 0).
+"""Build data/words.json frequencies (0-100, linear in Zipf, 100 = Zipf >= 5.5).
+
+Words wordfreq knows use its Zipf directly; for the rest (Zipf == 0) we estimate it.
 
 Sources, in order: Norvig count_1w.txt (Google web corpus, https://norvig.com/ngrams/count_1w.txt),
 then morphological base-word inference, then a length-based prior.
-Words wordfreq already knows are left untouched. Usage:
+Usage:
   curl -o /tmp/count_1w.txt https://norvig.com/ngrams/count_1w.txt
   uv run python scripts/refine_frequencies.py /tmp/count_1w.txt
 """
@@ -27,21 +29,11 @@ def zipf(w):
         return max(0.5, math.log10(norvig[w] / total * 1e9) - 0.1)
     return 0
 
-# calibrate Zipf -> 0-100 frequency using words already scored
-pts = collections.defaultdict(list)
-for w, f in d.items():
-    z = wf(w)
-    if z >= 1:
-        pts[round(z * 5) / 5].append(f)
-cal = sorted((z, sorted(v)[len(v) // 2]) for z, v in pts.items() if len(v) >= 5)
+ZIPF_CEIL = 5.5  # words at or above this Zipf are "fully common" (100)
 
 def tofreq(z):
-    if z < cal[0][0]:
-        return 5 + (cal[0][1] - 5) * max(z, 0) / cal[0][0]
-    for (a, fa), (b, fb) in zip(cal, cal[1:]):
-        if z <= b:
-            return fa + (fb - fa) * (z - a) / (b - a)
-    return cal[-1][1]
+    # linear in log-frequency, so every step of familiarity is worth the same
+    return 100 * min(max(z, 0), ZIPF_CEIL) / ZIPF_CEIL
 
 # (suffix, replacement, zipf penalty): inflections cost little, derivations more
 RULES = [
@@ -85,9 +77,7 @@ def estimate(w):
     return max(0.0, 0.8 - 0.06 * max(0, len(w) - 5)), 'prior'
 
 stats = collections.Counter()
-for w in d:
-    if wf(w) > 0:
-        continue
+for w in list(d):
     z, how = estimate(w)
     d[w] = round(tofreq(z), 1)
     stats[how] += 1

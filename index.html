@@ -51,7 +51,8 @@
 
   html, body {
     min-height: 100vh;
-    background: var(--bg);
+    background: radial-gradient(ellipse 70% 40% at 50% 0%, rgba(200, 240, 96, 0.07), transparent 70%), var(--bg);
+    background-repeat: no-repeat;
     color: var(--fg);
     font-family: 'Syne', sans-serif;
   }
@@ -146,6 +147,7 @@
     border: 1px solid var(--border);
     color: var(--fg-dim);
     padding: 8px 16px;
+    border-radius: 6px;
     cursor: pointer;
     transition: border-color 0.2s, color 0.2s;
   }
@@ -157,10 +159,11 @@
   /* ── Alphabet display ── */
   .tagline {
     font-family: 'DM Mono', monospace;
-    font-size: 13px;
+    font-size: 15px;
     letter-spacing: 0.02em;
     color: var(--fg-dim);
-    line-height: 1.5;
+    line-height: 1.6;
+    margin-top: -12px;
   }
   .tagline strong {
     color: var(--fg);
@@ -182,6 +185,7 @@
   }
   .tile {
     width: 42px; height: 42px;
+    border-radius: 6px;
     display: flex; align-items: center; justify-content: center;
     font-family: 'DM Mono', monospace;
     font-size: 18px;
@@ -194,6 +198,7 @@
     border-color: var(--accent);
     color: var(--accent);
     background: rgba(200, 240, 96, 0.06);
+    box-shadow: 0 0 14px rgba(200, 240, 96, 0.08);
   }
   .tile.inactive {
     border-color: var(--fg-dimmer);
@@ -217,13 +222,14 @@
     font-weight: 500;
     letter-spacing: 0.1em;
     padding: 14px 20px;
+    border-radius: 6px;
     outline: none;
     text-transform: lowercase;
     transition: border-color 0.2s;
   }
-  .word-input:focus { border-color: var(--fg-dim); }
+  .word-input:focus { border-color: var(--fg-dim); box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.04); }
   .word-input.invalid { border-color: var(--error); }
-  .word-input.valid { border-color: var(--accent); }
+  .word-input.valid { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(200, 240, 96, 0.1); }
   .word-input:disabled { opacity: 0.3; cursor: default; }
   .submit-btn {
     font-family: 'Syne', sans-serif;
@@ -235,6 +241,7 @@
     color: #0e0e0e;
     border: none;
     padding: 14px 28px;
+    border-radius: 6px;
     cursor: pointer;
     transition: opacity 0.2s, transform 0.1s;
   }
@@ -259,34 +266,63 @@
     position: relative;
     height: var(--bar-h);
     background: var(--fg-dimmer);
-    border-radius: 0;
+    border-radius: 5px;
   }
   .bar-labels {
     display: flex;
-    justify-content: space-between;
     font-family: 'DM Mono', monospace;
     font-size: 10px;
     letter-spacing: 0.15em;
+    white-space: nowrap;
     color: var(--fg-dim);
     margin-top: 6px;
   }
+  .bar-labels span {
+    flex: 1 1 0;
+    min-width: 0;
+    text-align: center;
+    padding-top: 4px;
+  }
+
+  .bar-example {
+    display: block;
+    margin-top: 8px;
+    font-style: normal;
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    color: var(--accent);
+    opacity: 0;
+    transform: translateY(-4px);
+    transition: opacity 0.5s, transform 0.5s;
+  }
+  .bar-example small {
+    display: block;
+    margin-top: 2px;
+    font-size: 9px;
+    color: var(--fg-dim);
+    letter-spacing: 0.1em;
+  }
+  .bar-example.show { opacity: 1; transform: none; }
 
   /* Each word dot on the bar */
   .bar-dot {
     position: absolute;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    width: 14px; height: 14px;
-    border-radius: 50%;
+    top: -4px;
+    bottom: -4px;
+    width: 2px;
+    transform: translateX(-50%);
     background: var(--accent);
+    border-radius: 1px;
     cursor: pointer;
-    transition: transform 0.2s;
+    transition: background 0.2s, width 0.2s;
     z-index: 2;
   }
-  .bar-dot:hover { transform: translate(-50%, -50%) scale(1.4); }
+  /* wider invisible hit area so thin ticks are easy to hover */
+  .bar-dot::before { content: ''; position: absolute; inset: 0 -5px; }
+  .bar-dot:hover { width: 4px; background: var(--fg); z-index: 3; }
   .bar-dot .dot-tooltip {
     position: absolute;
-    bottom: 22px;
+    bottom: 24px;
     left: 50%;
     transform: translateX(-50%);
     background: var(--panel);
@@ -411,7 +447,7 @@
   </header>
 
   <!-- Tagline -->
-  <p class="tagline">Find words using <strong>half the alphabet</strong> and <strong>120 seconds</strong> on the clock. Rare finds score big, common ones barely register. Same halfabet for everyone, different scores.</p>
+  <p class="tagline">Find words using <strong>half the alphabet</strong> and <strong>120 seconds</strong> on the clock.</p>
 
   <!-- Alphabet -->
   <div class="alphabet-section">
@@ -441,16 +477,15 @@
 
   <!-- Frequency bar -->
   <div class="bar-section">
-    <div class="section-label">Rarity map — 0 most common · 100 rarest</div>
     <div class="bar-container" id="barContainer">
       <!-- dots injected here -->
     </div>
     <div class="bar-labels">
-      <span>0</span>
-      <span>25</span>
-      <span>50</span>
-      <span>75</span>
-      <span>100</span>
+      <span>everyday<em class="bar-example" data-seg="0"></em></span>
+      <span>familiar<em class="bar-example" data-seg="1"></em></span>
+      <span>fancy<em class="bar-example" data-seg="2"></em></span>
+      <span>bookish<em class="bar-example" data-seg="3"></em></span>
+      <span>mythical<em class="bar-example" data-seg="4"></em></span>
     </div>
   </div>
 
@@ -554,6 +589,7 @@ function startGame() {
   renderTiles();
   renderBar();
   renderLog();
+  hideExamples();
 
   document.getElementById('startBtn').style.display = 'none';
 
@@ -608,6 +644,33 @@ function endGame() {
 
   umami.track('game-ended', { score: totalScore, words: wordLog.length });
   clearFeedback();
+  revealExamples();
+}
+
+// One example word per scale segment, drawn from today's letters, preferring ones the player missed
+function revealExamples() {
+  const pools = [[], [], [], [], []];
+  for (const [w, f] of Object.entries(wordData)) {
+    if (w.length < 4 || w.length > 9 || [...w].some(c => !availableLetters.has(c))) continue;
+    const seg = Math.min(4, Math.floor(rarityOf(f) / 20));
+    pools[seg].push(w);
+  }
+  document.querySelectorAll('.bar-example').forEach(el => {
+    const pool = pools[+el.dataset.seg];
+    const fresh = pool.filter(w => !submittedWords.has(w));
+    const list = fresh.length ? fresh : pool;
+    if (!list.length) return;
+    const w = list[Math.floor(Math.random() * list.length)];
+    el.innerHTML = `${w}<small>${wordPoints(w, wordData[w])} pts${submittedWords.has(w) ? ' · found' : ''}</small>`;
+    el.classList.add('show');
+  });
+}
+
+function hideExamples() {
+  document.querySelectorAll('.bar-example').forEach(el => {
+    el.classList.remove('show');
+    el.textContent = '';
+  });
 }
 
 // ── Render ─────────────────────────────────────────────────────────────────
@@ -679,18 +742,23 @@ function flashLetters(word) {
   });
 }
 
+// 0 (most frequent) – 100 (rarest). Frequency is stored linear in log-frequency (Zipf),
+// so rarity is too: every step of unfamiliarity is spaced evenly.
+function rarityOf(frequency) {
+  return 100 - frequency;
+}
+
+// Convex in rarity: everyday words earn a few points, rare finds dominate
 function wordPoints(word, frequency) {
-  const r = (100 - frequency) / 100;
   const lengthMult = Math.min(1.5, 0.7 + 0.1 * word.length);
-  return Math.round((1 + 99 * Math.pow(r, 1.5)) * lengthMult);
+  return Math.round((1 + 99 * Math.pow(rarityOf(frequency) / 100, 1.8)) * lengthMult);
 }
 
 function rarityTag(s) {
-  if (s >= 90) return 'very rare';
-  if (s >= 70) return 'rare';
-  if (s >= 50) return 'uncommon';
-  if (s >= 30) return 'moderate';
-  if (s >= 10) return 'common';
+  if (s >= 80) return 'mythical';
+  if (s >= 60) return 'bookish';
+  if (s >= 40) return 'fancy';
+  if (s >= 20) return 'familiar';
   return 'everyday';
 }
 
@@ -751,7 +819,7 @@ function submitWord() {
 
   // ✓ Valid — score is inverted: rarest = 100, most common = 0
   // rarity (0-100) drives labels/bar; points add a convex rarity curve and a mild length bonus
-  const rarity = Math.round(Math.sqrt(100 - frequency) * 10);
+  const rarity = rarityOf(frequency);
   const score = wordPoints(word, frequency);
   submittedWords.add(word);
   wordLog.push({ word, score, rarity });

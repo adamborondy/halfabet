@@ -44,24 +44,24 @@ Then shuffled with **mulberry32** PRNG, first 13 letters taken. Same output for 
 
 ### Scoring
 ```js
-rarity = Math.round(Math.sqrt(100 - frequency) * 10);          // 0-100, labels/bar only
-r = (100 - frequency) / 100;
-points = Math.round((1 + 99 * r ** 1.5) * Math.min(1.5, 0.7 + 0.1 * word.length));
+rarity = 100 - frequency;   // 0 = most frequent, 100 = rarest; drives bar, log bars, tags
+points = Math.round((1 + 99 * (rarity / 100) ** 1.8) * Math.min(1.5, 0.7 + 0.1 * word.length));
 ```
-- Convex rarity curve (r^1.5): common words (freq >70) are ~5% of a typical total vs ~17% with the old sqrt curve; rare words dominate but volume still matters (a 50-freq word ≈ 36-54 pts, a freq-5 word ≈ 93-139)
-- Length multiplier 1.0 (3 letters) → 1.5 (8+ letters) rewards typing effort and tie-breaks the large frequency-5 plateau
-- Every word is worth at least ~1 point (old formula gave 0 for the most common)
-- Rarity labels still use the old 0-100 value so thresholds below are unchanged
+- `frequency` in `words.json` is linear in Zipf (`100 * min(zipf, 5.5) / 5.5`), so near-synonyms in everyday vocabulary (skill / pool / lid / dill) are spread out instead of all landing at 90–100
+- One rarity scale feeds the position on the bar, the tag and the points, so they always agree
+- Convex curve (exponent 1.8): common words are worth little, rare words dominate, volume still matters
+- Length multiplier 1.0 (3 letters) → 1.5 (8+ letters); every word is worth ≥1 point
 
-### Rarity labels
-| Score | Label |
-|-------|-------|
-| 90–100 | very rare |
-| 70–89 | rare |
-| 50–69 | uncommon |
-| 30–49 | moderate |
-| 10–29 | common |
-| 0–9 | everyday |
+### Rarity tags (bar runs frequent → rare)
+| Rarity | Tag |
+|--------|-----|
+| 80–100 | mythical |
+| 60–79 | bookish |
+| 40–59 | fancy |
+| 20–39 | familiar |
+| 0–19 | everyday |
+
+The bar is split into five equal 20% segments labelled with these tags. When time runs out, each segment reveals an example word from today's letters (4–9 letters, preferring words the player missed) with its points.
 
 ### Game states
 `'idle'` → `'playing'` → `'ended'`
@@ -96,7 +96,7 @@ Three-span structure: `half` (accent color) + vertical divider (1.5px, accent) +
 2. **Tagline** — DM Mono, dimmed, `<strong>` highlights in white
 3. **Today's letters** — 26 tiles, active ones (accent) vs inactive (dimmed)
 4. **Enter a word** — text input + submit button; input turns red/green as you type
-5. **Rarity map** — horizontal bar 0–100, dot per found word with hover tooltip
+5. **Rarity bar** — horizontal bar from everyday → mythical (no heading), dot per found word with hover tooltip
 6. **Words found** — list sorted by score descending; each row: word, bar fill, score, rarity label
 
 ### Tile flash
@@ -163,6 +163,6 @@ Timer turns red (`--error`) when ≤10 seconds remain. End of game: feedback cle
    - 2-letter: TWL/SOWPODS standard word-game list (107 words) + common real-usage entries (`tv`, `dj`, `pc`, `cd`, `ac`, `dc`, etc.) confirmed by Oxford
    - 3-letter+: Oxford-validated, no further manual curation needed
 
-5. **Frequency refinement (`scripts/refine_frequencies.py`)** — the ~42,000 words `wordfreq` doesn't know were previously flat placeholders (5 / 9.4, plus ~7,600 wrongly high legacy values like `abulic` = 99). Now re-estimated from: Norvig's Google-web `count_1w.txt` (1,463 words), else a base word's frequency minus a morphology penalty (19,286 words, e.g. `pluckier` ← `plucky`), else a length prior (21,451 words; longer = rarer, range 5–~15). Words `wordfreq` knows are unchanged.
+5. **Frequency refinement (`scripts/refine_frequencies.py`)** — the ~42,000 words `wordfreq` doesn't know were previously flat placeholders (5 / 9.4, plus ~7,600 wrongly high legacy values like `abulic` = 99). Now re-estimated from: Norvig's Google-web `count_1w.txt` (1,463 words), else a base word's frequency minus a morphology penalty (19,286 words, e.g. `pluckier` ← `plucky`), else a length prior (21,451 words; longer = rarer, range 5–~15). Words `wordfreq` knows use its Zipf directly; all frequencies are then mapped linearly (`100 * min(zipf, 5.5) / 5.5`).
 
 **To regenerate or extend the word list**, the validation script requires macOS (for `DictionaryServices`) and `wordfreq` installed in the project venv (`uv add wordfreq`).
