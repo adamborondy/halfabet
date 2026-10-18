@@ -44,11 +44,14 @@ Then shuffled with **mulberry32** PRNG, first 13 letters taken. Same output for 
 
 ### Scoring
 ```js
-const score = Math.round(Math.sqrt(100 - frequency) * 10);
+rarity = Math.round(Math.sqrt(100 - frequency) * 10);          // 0-100, labels/bar only
+r = (100 - frequency) / 100;
+points = Math.round((1 + 99 * r ** 1.5) * Math.min(1.5, 0.7 + 0.1 * word.length));
 ```
-- `frequency` comes from `words.json` (0 = rarest, 100 = most common)
-- Score is inverted: rarest word → score ~100, most common → score ~0
-- Sqrt curve means ~5 common words ≈ 1 rare word — avoids punishing volume
+- Convex rarity curve (r^1.5): common words (freq >70) are ~5% of a typical total vs ~17% with the old sqrt curve; rare words dominate but volume still matters (a 50-freq word ≈ 36-54 pts, a freq-5 word ≈ 93-139)
+- Length multiplier 1.0 (3 letters) → 1.5 (8+ letters) rewards typing effort and tie-breaks the large frequency-5 plateau
+- Every word is worth at least ~1 point (old formula gave 0 for the most common)
+- Rarity labels still use the old 0-100 value so thresholds below are unchanged
 
 ### Rarity labels
 | Score | Label |
@@ -159,5 +162,7 @@ Timer turns red (`--error`) when ≤10 seconds remain. End of game: feedback cle
    - 1-letter: only `a` and `i` (Oxford flags all 26 letters as entries via abbreviation definitions)
    - 2-letter: TWL/SOWPODS standard word-game list (107 words) + common real-usage entries (`tv`, `dj`, `pc`, `cd`, `ac`, `dc`, etc.) confirmed by Oxford
    - 3-letter+: Oxford-validated, no further manual curation needed
+
+5. **Frequency refinement (`scripts/refine_frequencies.py`)** — the ~42,000 words `wordfreq` doesn't know were previously flat placeholders (5 / 9.4, plus ~7,600 wrongly high legacy values like `abulic` = 99). Now re-estimated from: Norvig's Google-web `count_1w.txt` (1,463 words), else a base word's frequency minus a morphology penalty (19,286 words, e.g. `pluckier` ← `plucky`), else a length prior (21,451 words; longer = rarer, range 5–~15). Words `wordfreq` knows are unchanged.
 
 **To regenerate or extend the word list**, the validation script requires macOS (for `DictionaryServices`) and `wordfreq` installed in the project venv (`uv add wordfreq`).

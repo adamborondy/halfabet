@@ -633,7 +633,7 @@ function renderBar() {
   wordLog.forEach(entry => {
     const dot = document.createElement('div');
     dot.className = 'bar-dot';
-    dot.style.left = entry.score + '%';
+    dot.style.left = entry.rarity + '%';
     dot.innerHTML = `<div class="dot-tooltip">${entry.word} · ${entry.score}</div>`;
     container.appendChild(dot);
   });
@@ -650,14 +650,14 @@ function renderLog() {
   list.innerHTML = '';
 
   [...wordLog].sort((a, b) => b.score - a.score).forEach(entry => {
-    const rarityLabel = rarityTag(entry.score);
+    const rarityLabel = rarityTag(entry.rarity);
     const item = document.createElement('div');
     item.className = 'log-item';
     item.innerHTML = `
       <span class="log-word">${entry.word}</span>
       <div class="log-right">
         <div class="log-bar">
-          <div class="log-bar-fill" style="width:${entry.score}%"></div>
+          <div class="log-bar-fill" style="width:${entry.rarity}%"></div>
         </div>
         <span class="log-score">${entry.score}</span>
         <span class="log-rarity">${rarityLabel}</span>
@@ -677,6 +677,12 @@ function flashLetters(word) {
       setTimeout(() => tiles[idx].classList.remove('flash'), 500);
     }
   });
+}
+
+function wordPoints(word, frequency) {
+  const r = (100 - frequency) / 100;
+  const lengthMult = Math.min(1.5, 0.7 + 0.1 * word.length);
+  return Math.round((1 + 99 * Math.pow(r, 1.5)) * lengthMult);
 }
 
 function rarityTag(s) {
@@ -744,15 +750,17 @@ function submitWord() {
   }
 
   // ✓ Valid — score is inverted: rarest = 100, most common = 0
-  const score = Math.round(Math.sqrt(100 - frequency) * 10);
+  // rarity (0-100) drives labels/bar; points add a convex rarity curve and a mild length bonus
+  const rarity = Math.round(Math.sqrt(100 - frequency) * 10);
+  const score = wordPoints(word, frequency);
   submittedWords.add(word);
-  wordLog.push({ word, score });
+  wordLog.push({ word, score, rarity });
   totalScore = Math.round((totalScore + score) * 10) / 10;
   input.value = '';
   input.className = 'word-input';
   document.getElementById('scoreDisplay').textContent = totalScore;
   document.getElementById('wordsDisplay').textContent = wordLog.length;
-  showFeedback(`${word} · ${rarityTag(score)} · ${score} points`, true);
+  showFeedback(`${word} · ${rarityTag(rarity)} · ${score} points`, true);
   flashLetters(word);
 
   renderBar();
